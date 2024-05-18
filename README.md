@@ -10,5 +10,5 @@ No installation required.
 
 ### Usage
 
-1. Open `GameOfLife.html` in the browser.
+1. Open `index.html` in the browser.
 2. Click play to start the game.
