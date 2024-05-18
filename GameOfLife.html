@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Game of Life</title>
+    <style>
+      body {
+        font-family: Verdana, sans-serif;
+        margin: 0%;
+        padding: 0%;
+        background: center
+          url("http://thecodeplayer.com/uploads/media/geometry.png");
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        background-color: rgba(0, 80, 70, 0.6);
+        width: 100vw;
+        height: 100vh;
+      }
+      .buttons-container {
+        display: flex;
+        justify-content: center;
+        margin: 32px;
+      }
+      .button {
+        text-shadow: rgba(0, 80, 70, 0.6) 2px 2px 16px;
+        margin-left: 64px;
+        margin-right: 64px;
+        font-size: 80px;
+        line-height: 80px;
+        -webkit-user-select: none; /* Safari */
+        -ms-user-select: none; /* IE 10 and IE 11 */
+        user-select: none; /* Standard syntax */
+        transition: scale 0.1s;
+        transition-timing-function: cubic-bezier(0.1, 0.7, 1, 0.1);
+      }
+      .button:hover {
+        text-shadow: white 0px 0px 4px;
+        scale: 1.1;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: repeat(50, 20px);
+        grid-template-rows: repeat(50, 20px);
+        border-style: solid;
+        border-width: 3px;
+        border-radius: 32px;
+        border-color: rgba(0, 80, 70, 0.1);
+        background-color: rgba(255, 255, 255, 0.3);
+        overflow: hidden;
+      }
+      .shadow {
+        box-shadow: 0px 0px 32px 0px rgba(0, 80, 70, 0.6);
+      }
+      .cell {
+        width: 20px;
+        height: 20px;
+        outline-width: thin;
+        outline-style: solid;
+        outline-color: rgba(0, 80, 70, 0.1);
+      }
+      .cell:hover {
+        animation: cubic-bezier(0.39, 0.575, 0.565, 1);
+        box-shadow: white 0px 0px 4px;
+        scale: 1.05;
+      }
+      .alive {
+        background-color: skyblue;
+        background-color: rgba(0, 80, 70, 0.6);
+        box-shadow: 0px 0px 2px 0px rgba(0, 80, 70, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="buttons-container">
+        <div id="start" class="button" onclick="startGame()">▶️</div>
+        <div class="button" onclick="randomFill()">🎲</div>
+        <div class="button" onclick="clearBoard()">🗑️</div>
+        <div id="algorithm" class="button" onclick="toggleAlgorithm()">🦠</div>
+        <div id="steps" class="button">0</div>
+      </div>
+      <div id="board" class="board shadow"></div>
+    </div>
+    <script>
+      const rows = 50;
+      const cols = 50;
+      let algorithmIsCorrect = true;
+      let steps = 0;
+      const board = document.getElementById("board");
+      const start = document.getElementById("start");
+      const stepsEl = document.getElementById("steps");
+      const algorithmEl = document.getElementById("algorithm");
+      let interval = null;
+
+      function initializeBoard() {
+        for (let i = 0; i < rows * cols; i++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.addEventListener("click", toggleCell);
+          board.appendChild(cell);
+        }
+        randomFill();
+      }
+
+      function toggleCell(event) {
+        event.target.classList.toggle("alive");
+      }
+
+      function toggleAlgorithm() {
+        algorithmIsCorrect = !algorithmIsCorrect;
+        algorithmEl.innerText = algorithmIsCorrect ? "🦠" : "🪱";
+      }
+
+      function randomFill() {
+        clearBoard();
+        const cells = Array.from(board.children);
+        const cellsToFill = Math.floor(cells.length * 0.2);
+        for (let i = 0; i < cellsToFill; i++) {
+          const cellIndex = Math.floor(Math.random() * cells.length);
+          cells[cellIndex].classList.add("alive");
+        }
+      }
+
+      function startGame() {
+        const text = start.innerText;
+        if (text == "▶️") {
+          start.innerText = "⏸️";
+          if (interval !== null) clearInterval(interval);
+          interval = setInterval(step, 100);
+        } else {
+          start.innerText = "▶️";
+          clearInterval(interval);
+        }
+      }
+
+      function clearBoard() {
+        clearInterval(interval);
+        steps = 0;
+        stepsEl.innerText = steps;
+        start.innerText = "▶️";
+        const cells = Array.from(board.children);
+        cells.forEach((cell) => cell.classList.remove("alive"));
+      }
+
+      function step() {
+        steps++;
+        stepsEl.innerText = steps;
+        const cells = Array.from(board.children);
+        const nextState = cells.map((cell) => cell.classList.contains("alive"));
+
+        cells.forEach((cell, idx) => {
+          const x = Math.floor(idx / cols);
+          const y = idx % cols;
+          const aliveNeighbors = countAliveNeighbors(x, y, cells);
+          const alive = nextState[idx];
+
+          if (alive && (aliveNeighbors < 2 || aliveNeighbors > 3)) {
+            nextState[idx] = false;
+          } else if (!alive && aliveNeighbors === 3) {
+            nextState[idx] = true;
+          }
+          if (!algorithmIsCorrect) {
+            cell.classList.toggle("alive", nextState[idx]);
+          }
+        });
+
+        if (algorithmIsCorrect) {
+          cells.forEach((cell, idx) => {
+            cell.classList.toggle("alive", nextState[idx]);
+          });
+        }
+      }
+
+      function countAliveNeighbors(x, y, cells) {
+        let count = 0;
+        for (let i = -1; i <= 1; i++) {
+          for (let j = -1; j <= 1; j++) {
+            const nx = x + i;
+            const ny = y + j;
+            if (i === 0 && j === 0) continue;
+            const index = nx * cols + ny;
+            if (nx >= 0 && nx < rows && ny >= 0 && ny < cols) {
+              if (cells[index].classList.contains("alive")) {
+                count++;
+              }
+            }
+          }
+        }
+        return count;
+      }
+
+      initializeBoard();
+    </script>
+  </body>
+</html>
